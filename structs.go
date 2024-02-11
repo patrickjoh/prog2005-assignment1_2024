@@ -11,7 +11,19 @@ type Status struct {
 	Uptime       time.Duration `json:"uptime"`
 }
 
+type Author struct {
+	Name string `json:"name"`
+}
+
+type Book struct {
+	Authors   []Author `json:"authors"`
+	Languages []string `json:"languages"`
+}
+
 type Gutendex struct {
+	Count int    `json:"count"`
+	Next  string `json:"next"`
+	Books []Book `json:"results"`
 }
 
 type L2C struct {
@@ -20,12 +32,17 @@ type L2C struct {
 type Country struct {
 }
 
-type Response struct {
-	Country         string  `json:"country"`
-	Isocode         string  `json:"isocode"`
-	Language        string  `json:"language"`
-	Books           int     `json:"books"`
-	Authors         int     `json:"authors"`
-	Fraction        float32 `json:"fraction"`
-	ReadershipCount int     `json:"readership"`
+type BookCount struct {
+	Language string  `json:"language"`
+	Books    int     `json:"books"`
+	Authors  int     `json:"authors"`
+	Fraction float32 `json:"fraction"`
+}
+
+type Readership struct {
+	Country         string `json:"country"`
+	Isocode         string `json:"isocode"`
+	Books           int    `json:"books"`
+	Authors         int    `json:"authors"`
+	ReadershipCount int    `json:"readership"`
 }

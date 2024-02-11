@@ -11,7 +11,7 @@ const (
 	STATUS_PATH     = "/librarystats/v1/status/"
 
 	// APIs
-	GUTENDEX_API = ""
+	GUTENDEX_API = "http://129.241.150.113:8000/books/"
 	L2C_API      = ""
 	COUNTRY_API  = ""
 
