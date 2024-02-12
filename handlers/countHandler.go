@@ -41,25 +41,12 @@ func handleGetCount(w http.ResponseWriter, r *http.Request) {
 	// Split the languages into a slice
 	languages := strings.Split(lanParam, ",")
 
-	// Initialize a slice to hold all ISO codes
-	var isocode []string
+	// Initialize a map to hold all ISO codes
+	isocode := make(map[string]bool)
 
-	// Loop through each university in the response
+	// Loop through each language and add iso code to the map
 	for _, lang := range languages {
-		// Check if the iso code is already in the slice
-		found := false
-		// Loop through each iso code in the slice
-		for _, code := range isocode {
-			// If the iso code is found, break out of the loop
-			if lang == code {
-				found = true
-				break
-			}
-		}
-		// If the iso code is not found, append it to the slice
-		if !found {
-			isocode = append(isocode, lang)
-		}
+		isocode[lang] = true
 	}
 
 	responseData, err := getBooks(languages)
@@ -85,12 +72,17 @@ func handleGetCount(w http.ResponseWriter, r *http.Request) {
 
 func getBooks(languages []string) ([]as1.BookCount, error) {
 
+	// Initialize a http client
+	client := &http.Client{
+		Timeout: time.Second * 10, // Set time for requests to time out
+	}
+
 	// Construct the URL for the GutendexAPI
 	bookUrl := as1.GUTENDEX_API + "?languages=" + strings.Join(languages, ",")
 
 	log.Println("Book URL: ", bookUrl)
 	// Make a request to the GutendexAPI
-	books, err := fetchBooks(bookUrl)
+	books, err := fetchBooks(bookUrl, client)
 	if err != nil {
 		return nil, err
 	}
@@ -120,14 +112,13 @@ func getBooks(languages []string) ([]as1.BookCount, error) {
 	// Make request for all books
 	bookUrl = as1.GUTENDEX_API
 
-	log.Println("Book URL: ", bookUrl)
+	// log.Println("Book URL: ", bookUrl)
 	// Make a request to the GutendexAPI
-	totalBooks, err := getTotalBooks(bookUrl)
+	totalBooks, err := getTotalBooks(bookUrl, client)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println("Total books: ", totalBooks)
 	// Initialize a slice to hold all response objects
 	var response []as1.BookCount
 
@@ -150,13 +141,8 @@ func getBooks(languages []string) ([]as1.BookCount, error) {
 
 }
 
-func fetchBooks(bookUrl string) ([]as1.Book, error) {
+func fetchBooks(bookUrl string, client *http.Client) ([]as1.Book, error) {
 	var allBooks []as1.Book
-
-	// Initialize a http client
-	client := &http.Client{
-		Timeout: time.Second * 10, // Set time for requests to time out
-	}
 
 	for bookUrl != "" {
 		// Make a request to the GutendexAPI
@@ -165,6 +151,9 @@ func fetchBooks(bookUrl string) ([]as1.Book, error) {
 			return nil, err
 		}
 
+		// Close the response body after successfully decoding the data
+		defer bookRes.Body.Close()
+
 		// Decode the responses into a slice of Book structs
 		var bookData as1.Gutendex
 		err = json.NewDecoder(bookRes.Body).Decode(&bookData)
@@ -172,23 +161,17 @@ func fetchBooks(bookUrl string) ([]as1.Book, error) {
 			return nil, err
 		}
 
-		// Close the response body after successfully decoding the data
-		bookRes.Body.Close()
-
 		// Append the book data to the allBooks slice
 		allBooks = append(allBooks, bookData.Books...)
 		// Set the next URL to the next page of data
 		bookUrl = bookData.Next
+
 	}
 
 	return allBooks, nil
 }
 
-func getTotalBooks(bookUrl string) (int, error) {
-	// Initialize a http client
-	client := &http.Client{
-		Timeout: time.Second * 10, // Set time for requests to time out
-	}
+func getTotalBooks(bookUrl string, client *http.Client) (int, error) {
 
 	// Make a request to the GutendexAPI
 	bookRes, err := client.Get(bookUrl)
@@ -197,7 +180,7 @@ func getTotalBooks(bookUrl string) (int, error) {
 	}
 
 	// Decode the responses into a slice of Book structs
-	var bookData as1.Gutendex
+	var bookData as1.TotalBooks
 	err = json.NewDecoder(bookRes.Body).Decode(&bookData)
 	if err != nil {
 		return 0, err
