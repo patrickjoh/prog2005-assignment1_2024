@@ -44,10 +44,18 @@ func handleGetCount(w http.ResponseWriter, r *http.Request) {
 	// Initialize a map to hold all ISO codes
 	isocode := make(map[string]bool)
 
-	// Loop through each language and add iso code to the map
+	// Loop through each language and add iso code to the map if it is valid
 	for _, lang := range languages {
+		if len(lang) != 2 {
+			// Write which language code is invalid
+			http.Error(w, "Invalid language code", http.StatusBadRequest)
+			log.Println("Invalid language code")
+			return
+		}
 		isocode[lang] = true
 	}
+
+	// Check if any of the codes are less or more than 2 characters
 
 	responseData, err := getBooks(languages)
 	if err != nil {
@@ -151,15 +159,15 @@ func fetchBooks(bookUrl string, client *http.Client) ([]as1.Book, error) {
 			return nil, err
 		}
 
-		// Close the response body after successfully decoding the data
-		defer bookRes.Body.Close()
-
 		// Decode the responses into a slice of Book structs
 		var bookData as1.Gutendex
 		err = json.NewDecoder(bookRes.Body).Decode(&bookData)
 		if err != nil {
 			return nil, err
 		}
+
+		// Close the response body after successfully decoding the data
+		bookRes.Body.Close()
 
 		// Append the book data to the allBooks slice
 		allBooks = append(allBooks, bookData.Books...)
@@ -180,7 +188,7 @@ func getTotalBooks(bookUrl string, client *http.Client) (int, error) {
 	}
 
 	// Decode the responses into a slice of Book structs
-	var bookData as1.TotalBooks
+	var bookData as1.Gutendex
 	err = json.NewDecoder(bookRes.Body).Decode(&bookData)
 	if err != nil {
 		return 0, err
