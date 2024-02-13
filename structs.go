@@ -27,9 +27,13 @@ type Gutendex struct {
 }
 
 type L2C struct {
+	Alpha2Code string `json:"ISO3166_1_Alpha_2"`
+	Name       string `json:"Official_Name"`
 }
 
 type Country struct {
+	Alpha2Code string `json:"cca2"`
+	Population int    `json:"population"`
 }
 
 type BookCount struct {
@@ -40,9 +44,9 @@ type BookCount struct {
 }
 
 type Readership struct {
-	Country         string `json:"country"`
-	Isocode         string `json:"isocode"`
-	Books           int    `json:"books"`
-	Authors         int    `json:"authors"`
-	ReadershipCount int    `json:"readership"`
+	Country    string `json:"country"`
+	Isocode    string `json:"isocode"`
+	Books      int    `json:"books"`
+	Authors    int    `json:"authors"`
+	Readership int    `json:"readership"`
 }

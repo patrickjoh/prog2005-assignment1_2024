@@ -12,8 +12,8 @@ const (
 
 	// APIs
 	GUTENDEX_API = "http://129.241.150.113:8000/books/"
-	L2C_API      = ""
-	COUNTRY_API  = ""
+	L2C_API      = "http://129.241.150.113:3000/language2countries/"
+	COUNTRY_API  = "http://129.241.150.113:8080/v3.1/alpha?codes="
 
 	// Status
 	GUTENDEX_STATUS = "http://129.241.150.113:8000/books/"
