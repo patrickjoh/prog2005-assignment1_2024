@@ -3,10 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	as1 "example/assignment1_2024"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -82,13 +84,13 @@ func getBooks(languages []string) ([]as1.BookCount, error) {
 
 	// Initialize a http client
 	client := &http.Client{
-		Timeout: time.Second * 10, // Set time for requests to time out
+		Timeout: time.Second * 30, // Set time for requests to time out
 	}
 
 	// Construct the URL for the GutendexAPI
 	bookUrl := as1.GUTENDEX_API + "?languages=" + strings.Join(languages, ",")
 
-	log.Println("Book URL: ", bookUrl)
+	// log.Println("Book URL: ", bookUrl)
 	// Make a request to the GutendexAPI
 	books, err := fetchBooks(bookUrl, client)
 	if err != nil {
@@ -150,31 +152,64 @@ func getBooks(languages []string) ([]as1.BookCount, error) {
 }
 
 func fetchBooks(bookUrl string, client *http.Client) ([]as1.Book, error) {
+	resultsPerPage := 32
+
+	// First, fetch the first page to get the total count
+	resp, err := client.Get(bookUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	var initialData as1.Gutendex
+	if err := json.NewDecoder(resp.Body).Decode(&initialData); err != nil {
+		return nil, err
+	}
+	resp.Body.Close() // Close the response body after successfully decoding the data
+
+	// Calculate the total number of pages based on the count and results per page
+	totalPages := (initialData.Count + resultsPerPage) / resultsPerPage // Ceiling division
+
+	// Create a semaphore to limit the number of concurrent requests
+	sem := make(chan struct{}, 10)
+
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
 	var allBooks []as1.Book
 
-	for bookUrl != "" {
-		// Make a request to the GutendexAPI
-		bookRes, err := client.Get(bookUrl)
+	fetchPage := func(page int) {
+		defer wg.Done()
+		sem <- struct{}{}        // Acquire a semaphore
+		defer func() { <-sem }() // Release the semaphore
+
+		pageUrl := fmt.Sprintf("%s&page=%d", bookUrl, page)
+		resp, err := client.Get(pageUrl)
 		if err != nil {
-			return nil, err
+			log.Println("Error fetching page", page, ":", err)
+			return
 		}
+		defer resp.Body.Close()
 
-		// Decode the responses into a slice of Book structs
-		var bookData as1.Gutendex
-		err = json.NewDecoder(bookRes.Body).Decode(&bookData)
-		if err != nil {
-			return nil, err
+		if resp.StatusCode == http.StatusOK {
+			var pageData as1.Gutendex
+			if err := json.NewDecoder(resp.Body).Decode(&pageData); err != nil {
+				fmt.Printf("Error decoding page %d: %v\n", page, err)
+				return
+			}
+
+			mutex.Lock()
+			allBooks = append(allBooks, pageData.Books...)
+			mutex.Unlock()
+		} else {
+			fmt.Printf("Unexpected status code for page %d: %d\n", page, resp.StatusCode)
 		}
-
-		// Close the response body after successfully decoding the data
-		bookRes.Body.Close()
-
-		// Append the book data to the allBooks slice
-		allBooks = append(allBooks, bookData.Books...)
-		// Set the next URL to the next page of data
-		bookUrl = bookData.Next
-
 	}
+
+	for page := 1; page <= totalPages; page++ {
+		wg.Add(1)
+		go fetchPage(page)
+	}
+
+	wg.Wait() // Wait for all pages to be fetched
 
 	return allBooks, nil
 }
