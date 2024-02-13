@@ -42,6 +42,7 @@ func handleGetCount(w http.ResponseWriter, r *http.Request) {
 
 	// Initialize a map to hold all ISO codes
 	isocode := make(map[string]bool)
+	var validIso []string
 
 	// Loop through each language and add iso code to the map if it is valid
 	for _, lang := range languages {
@@ -51,12 +52,14 @@ func handleGetCount(w http.ResponseWriter, r *http.Request) {
 			log.Println("Invalid language code")
 			return
 		}
-		isocode[lang] = true
+		if !isocode[lang] {
+			isocode[lang] = true
+			validIso = append(validIso, lang)
+		}
 	}
-
 	// Check if any of the codes are less or more than 2 characters
 
-	responseData, err := getBooks(languages)
+	responseData, err := getBooks(validIso)
 	if err != nil {
 		http.Error(w, "Error during request to GutendexAPI", http.StatusInternalServerError)
 		log.Println("Error during request to GutendexAPI")
@@ -72,6 +75,8 @@ func handleGetCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure that the server interprets requests as JSON from Client (browser)
+	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshallResponse)
 
