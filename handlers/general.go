@@ -15,7 +15,7 @@ func getBooks(languages []string) ([]as1.BookCount, error) {
 
 	// Initialize a http client
 	client := &http.Client{
-		Timeout: time.Second * 30, // Set time for requests to time out
+		Timeout: time.Second * 10, // Set time for requests to time out
 	}
 
 	// Construct the URL for the GutendexAPI
