@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -101,7 +102,7 @@ func fetchBooks(bookUrl string, client *http.Client) ([]as1.Book, error) {
 	totalPages := (initialData.Count + resultsPerPage) / resultsPerPage // Ceiling division
 
 	// Create a semaphore to limit the number of concurrent requests
-	sem := make(chan struct{}, 10)
+	sem := make(chan struct{}, runtime.NumCPU())
 
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
